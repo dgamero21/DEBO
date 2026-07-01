@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+
+  /* Accent Colors (Avocado theme) */
+  --color-accent: #5d753e;
+  --color-accent-light: #9eb66c;
+  --color-accent-dark: #3f5328;
+  --color-accent-soft: #f3f5e4;
+
+  /* Surfaces */
+  --color-bg-primary: #f8faf3;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #eef2e1;
+
+  /* Typography */
+  --color-text-primary: #1e2b1f;
+  --color-text-secondary: #5b6a50;
+  --color-text-tertiary: #7a886f;
+  --color-text-disabled: #a2ac92;
+
+  /* Borders */
+  --color-border-primary: #d8dfcb;
+  --color-border-secondary: #e7eee1;
+
+  /* Semantics */
+  --color-success-main: #6e8b3d;
+  --color-success-bg: #eef5d2;
+  --color-warning-main: #b6a45a;
+  --color-warning-bg: #faf6dc;
+  --color-error-main: #b14c34;
+  --color-error-bg: #ffebe4;
+  --color-info-main: #60714c;
+  --color-info-bg: #e8f0d4;
+}
+
+:root {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar for premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-primary);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-disabled);
+}
+
+/* Apple Pro Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

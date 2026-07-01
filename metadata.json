@@ -1,0 +1,6 @@
+{
+  "name": "DEBO Finanzas",
+  "description": "Aplicación de finanzas personales con control de gastos, tags inteligentes y extractor automático de resúmenes de cuenta de bancos argentinos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
