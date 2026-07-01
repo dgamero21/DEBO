@@ -3,39 +3,40 @@
 @import "./components.css";
 
 /* ═══════════════════════════════════════════════
-   🍎 DEBO Design System — Apple Brand
+   DEBO Design System — App Web Claro
    ═══════════════════════════════════════════════ */
 
 @theme inline {
-  /* ── Apple Brand Colors ── */
-  --color-apple-blue: #0066cc;
-  --color-apple-blue-light: #2997ff;
-  --color-apple-blue-dark: #004da6;
+  /* ── Accent Colors ── */
+  --color-accent: #5d753e;
+  --color-accent-light: #9eb66c;
+  --color-accent-dark: #3f5328;
+  --color-accent-soft: #f3f5e4;
 
   /* Surface & Background */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f5f5f7;
-  --color-bg-tertiary: #fafafa;
+  --color-bg-primary: #f8faf3;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #eef2e1;
 
   /* Text */
-  --color-text-primary: #1d1d1f;
-  --color-text-secondary: #6e6e73;
-  --color-text-tertiary: #86868b;
-  --color-text-disabled: #bfbfbf;
+  --color-text-primary: #1e2b1f;
+  --color-text-secondary: #5b6a50;
+  --color-text-tertiary: #7a886f;
+  --color-text-disabled: #a2ac92;
 
   /* Borders */
-  --color-border-primary: #d2d2d7;
-  --color-border-secondary: #e8e8ed;
+  --color-border-primary: #d8dfcb;
+  --color-border-secondary: #e7eee1;
 
   /* Semantic */
-  --color-success: #30d158;
-  --color-success-bg: #f6ffed;
-  --color-warning: #ff9f0a;
-  --color-warning-bg: #fffbe6;
-  --color-error: #ff453a;
-  --color-error-bg: #fff2f0;
-  --color-info: #0066cc;
-  --color-info-bg: #e6f7ff;
+  --color-success: #6e8b3d;
+  --color-success-bg: #eef5d2;
+  --color-warning: #b6a45a;
+  --color-warning-bg: #faf6dc;
+  --color-error: #b14c34;
+  --color-error-bg: #ffebe4;
+  --color-info: #60714c;
+  --color-info-bg: #e8f0d4;
 
   /* Typography — Apple SF Pro fallback chain */
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif;
@@ -74,7 +75,38 @@
   --spacing-6xl: 80px;
   --spacing-7xl: 96px;
 
-  /* Border Radius — Apple */
+  /* ── Max Width / Container (Tailwind theme) ── */
+  --container-none: none;
+  --container-full: 100%;
+  --container-3xs: 16rem;
+  --container-2xs: 18rem;
+  --container-xs: 20rem;
+  --container-sm: 24rem;
+  --container-md: 28rem;
+  --container-lg: 32rem;
+  --container-xl: 36rem;
+  --container-2xl: 42rem;
+  --container-3xl: 48rem;
+  --container-4xl: 56rem;
+  --container-5xl: 64rem;
+  --container-6xl: 72rem;
+  --container-7xl: 80rem;
+  --max-width-prose: 65ch;
+  --max-width-none: none;
+  --max-width-full: 100%;
+  --max-width-xs: 20rem;
+  --max-width-sm: 24rem;
+  --max-width-md: 28rem;
+  --max-width-lg: 32rem;
+  --max-width-xl: 36rem;
+  --max-width-2xl: 42rem;
+  --max-width-3xl: 48rem;
+  --max-width-4xl: 56rem;
+  --max-width-5xl: 64rem;
+  --max-width-6xl: 72rem;
+  --max-width-7xl: 80rem;
+
+  /* Border Radius */
   --radius-sm: 5px;
   --radius-md: 8px;
   --radius-lg: 10px;
@@ -84,23 +116,16 @@
   --radius-full: 9999px;
 }
 
-/* ── Dark Mode ── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-primary: #101010;
-    --color-bg-secondary: #1a1a1c;
-    --color-bg-tertiary: #222224;
-    --color-text-primary: #f5f5f7;
-    --color-text-secondary: #a1a1a6;
-    --color-text-tertiary: #6e6e73;
-    --color-text-disabled: #4f4f50;
-    --color-border-primary: #424245;
-    --color-border-secondary: #2a2a2c;
-    --color-success-bg: #192913;
-    --color-warning-bg: #312512;
-    --color-error-bg: #32191a;
-    --color-info-bg: #111d2a;
-    --color-apple-blue: #2997ff;
-    --color-apple-blue-light: #64b5f6;
-  }
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-bg-primary);
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
