@@ -1,0 +1,123 @@
+/* ═══════════════════════════════════════════════
+   🍎 DEBO Design Tokens — Apple Brand
+   ═══════════════════════════════════════════════
+   Design system: Apple
+   Source: Open Design (nexu-io/open-design)
+   ═══════════════════════════════════════════════ */
+
+:root {
+  /* ── Brand Colors ── */
+  --debo-blue: #0066cc;
+  --debo-blue-hover: #2384d9;
+  --debo-blue-active: #004da6;
+  --debo-blue-light: #2997ff;
+  --debo-blue-bg: #e6f7ff;
+
+  /* ── Surfaces ── */
+  --debo-bg: #ffffff;
+  --debo-bg-secondary: #f5f5f5;
+  --debo-bg-tertiary: #fafafa;
+  --debo-bg-elevated: #ffffff;
+
+  /* ── Text ── */
+  --debo-text: #1f1f1f;
+  --debo-text-secondary: #595959;
+  --debo-text-tertiary: #8c8c8c;
+  --debo-text-disabled: #bfbfbf;
+
+  /* ── Borders ── */
+  --debo-border: #d9d9d9;
+  --debo-border-secondary: #f0f0f0;
+
+  /* ── Semantic ── */
+  --debo-success: #52c41a;
+  --debo-success-bg: #f6ffed;
+  --debo-warning: #faad14;
+  --debo-warning-bg: #fffbe6;
+  --debo-error: #ff4d4f;
+  --debo-error-bg: #fff2f0;
+  --debo-info: #0066cc;
+  --debo-info-bg: #e6f7ff;
+
+  /* ── Typography ── */
+  --debo-font: 'SF Pro HK', system-ui, -apple-system, 'Segoe UI',
+    'Helvetica Neue', Arial, sans-serif;
+  --debo-font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono',
+    Menlo, Courier, monospace;
+
+  /* ── Font Scale ── */
+  --debo-fs-xs: 12px;
+  --debo-fs-sm: 14px;
+  --debo-fs-base: 16px;
+  --debo-fs-lg: 18px;
+  --debo-fs-xl: 22px;
+  --debo-fs-h5: 18px;
+  --debo-fs-h4: 22px;
+  --debo-fs-h3: 26px;
+  --debo-fs-h2: 32px;
+  --debo-fs-h1: 38px;
+
+  --debo-lh: 1.571;
+  --debo-lh-heading: 1.25;
+
+  /* ── Spacing ── */
+  --debo-space-xs: 4px;
+  --debo-space-sm: 8px;
+  --debo-space-md: 12px;
+  --debo-space-lg: 16px;
+  --debo-space-xl: 20px;
+  --debo-space-2xl: 24px;
+  --debo-space-3xl: 32px;
+  --debo-space-4xl: 48px;
+
+  /* ── Border Radius ── */
+  --debo-radius-sm: 5px;
+  --debo-radius: 8px;
+  --debo-radius-lg: 10px;
+  --debo-radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --debo-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --debo-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --debo-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  /* ── Motion ── */
+  --debo-duration-fast: 0.1s;
+  --debo-duration-mid: 0.2s;
+  --debo-duration-slow: 0.3s;
+  --debo-ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --debo-ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+/* ── Dark Mode ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --debo-blue: #2173bb;
+    --debo-blue-hover: #4494d1;
+    --debo-blue-active: #1e5d94;
+    --debo-blue-light: #4494d1;
+    --debo-blue-bg: #111d2a;
+
+    --debo-bg: #141414;
+    --debo-bg-secondary: #1d1d1d;
+    --debo-bg-tertiary: #272727;
+    --debo-bg-elevated: #272727;
+
+    --debo-text: #dcdcdc;
+    --debo-text-secondary: #adadad;
+    --debo-text-tertiary: #7e7e7e;
+    --debo-text-disabled: #4f4f4f;
+
+    --debo-border: #3e3e3e;
+    --debo-border-secondary: #303030;
+
+    --debo-success-bg: #192913;
+    --debo-warning-bg: #312512;
+    --debo-error-bg: #32191a;
+    --debo-info-bg: #111d2a;
+
+    --debo-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --debo-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --debo-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+}
