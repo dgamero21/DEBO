@@ -33,6 +33,12 @@ parser/tests/.pytest_cache/
 *.sqlite
 *.sqlite3
 
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
 # OS metadata
 .DS_Store
 Thumbs.db

@@ -230,6 +230,7 @@ export default function LoginView({ initialMode, onNavigate, onLoginSuccess }: L
         provider,
         options: {
           redirectTo: window.location.origin,
+          ...(provider === "google" ? { queryParams: { prompt: "select_account" } } : {}),
         },
       });
       if (oauthError) {

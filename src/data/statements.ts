@@ -8,7 +8,7 @@ export interface MockTransaction {
 
 export interface BankStatement {
   bankName: string;
-  bankSlug: "galicia" | "santander" | "macro" | "nacion" | "bbva";
+  bankSlug: "galicia" | "santander" | "macro" | "nacion" | "bbva" | "naranja";
   cardType: "visa" | "mastercard" | "amex";
   cardLastFour: string;
   holderName: string;
@@ -222,29 +222,78 @@ MOVIMIENTOS:
 20/05/2026 PLAYSTATION NETWORK               $ 18.900,00
 25/05/2026 AYSA AGUA SA                      $ 11.200,00
 28/05/2026 COLEGIO INSCRIPCION               $ 39.800,00`
+  },
+  {
+    bankName: "Naranja",
+    bankSlug: "naranja",
+    cardType: "mastercard",
+    cardLastFour: "6370",
+    holderName: "GABRIEL ESTEBAN RUIZ",
+    periodFrom: "2026-05-01",
+    periodTo: "2026-05-31",
+    dueDate: "2026-06-15",
+    totalAmount: 125450.00,
+    minimumPayment: 28000.00,
+    previousBalance: 85000.00,
+    paymentReceived: 85000.00,
+    newCharges: 125450.00,
+    interestCharges: 0.00,
+    otherCharges: 0.00,
+    transactions: [
+      { date: "2026-05-03", description: "COTO SAN JUSTO", amount: -22300.00, category: "Alimentación", tags: ["Super", "Comida"] },
+      { date: "2026-05-07", description: "NETFLIX ARGENTINA", amount: -8900.00, category: "Entretenimiento", tags: ["Streaming", "Suscripción"] },
+      { date: "2026-05-10", description: "MERCADOLIBRE *CELU", amount: -65000.00, category: "Tecnología", tags: ["Celular", "Cuotas"] },
+      { date: "2026-05-14", description: "SU PAGO RESUMEN", amount: 85000.00, category: "Otros", tags: ["Pago", "Crédito"] },
+      { date: "2026-05-18", description: "YPF RUTA 2", amount: -15200.00, category: "Transporte", tags: ["Auto", "Combustible"] },
+      { date: "2026-05-22", description: "FARMACITY LOUNDRES", amount: -8950.00, category: "Otros", tags: ["Farmacia", "Salud"] },
+      { date: "2026-05-26", description: "PEDIDOSYA *MCDONALDS", amount: -5100.00, category: "Alimentación", tags: ["Delivery", "FastFood"] }
+    ],
+    rawText: `NARANJA - RESUMEN DE TARJETA DE CREDITO
+TITULAR: GABRIEL ESTEBAN RUIZ
+TARJETA NRO: **** **** **** 6370
+PERIODO: 01/05/2026 AL 31/05/2026
+VENCIMIENTO: 15/06/2026
+PAGO MINIMO: $ 28.000,00
+PAGO TOTAL: $ 125.450,00
+SALDO ANTERIOR: $ 85.000,00
+PAGOS DEL PERIODO: $ 85.000,00
+
+DETALLE DE MOVIMIENTOS:
+03/05/2026 COTO SAN JUSTO                  $ 22.300,00
+07/05/2026 NETFLIX ARGENTINA               $  8.900,00
+10/05/2026 MERCADOLIBRE *CELU              $ 65.000,00
+14/05/2026 SU PAGO RESUMEN                 $ 85.000,00-
+18/05/2026 YPF RUTA 2                      $ 15.200,00
+22/05/2026 FARMACITY LOUNDRES              $  8.950,00
+26/05/2026 PEDIDOSYA *MCDONALDS            $  5.100,00`
   }
 ];
 
 // Simple, high-precision parser logic in TS to mimic the backend parsers in real-time
-export function parseStatementText(text: string): BankStatement | null {
-  // Try to match the slug
-  let detectedSlug: "galicia" | "santander" | "macro" | "nacion" | "bbva" | null = null;
+export function parseStatementText(text: string, forceSlug?: "galicia" | "santander" | "macro" | "nacion" | "bbva" | "naranja" | null): BankStatement | null {
   const lowerText = text.toLowerCase();
+
+  // Try to match the slug — use forceSlug if provided, otherwise auto-detect
+  let detectedSlug: "galicia" | "santander" | "macro" | "nacion" | "bbva" | "naranja" | null = forceSlug || null;
   
-  if (lowerText.includes("galicia")) {
-    detectedSlug = "galicia";
-  } else if (lowerText.includes("santander")) {
-    detectedSlug = "santander";
-  } else if (lowerText.includes("macro") || lowerText.includes("american express")) {
-    detectedSlug = "macro";
-  } else if (lowerText.includes("nacion") || lowerText.includes("nación")) {
-    detectedSlug = "nacion";
-  } else if (lowerText.includes("bbva")) {
-    detectedSlug = "bbva";
-  } else {
-    // default to Galicia if we can't detect, for demo purposes
-    detectedSlug = "galicia";
+  if (!detectedSlug) {
+    if (lowerText.includes("galicia")) {
+      detectedSlug = "galicia";
+    } else if (lowerText.includes("santander")) {
+      detectedSlug = "santander";
+    } else if (lowerText.includes("macro") || lowerText.includes("american express")) {
+      detectedSlug = "macro";
+    } else if (lowerText.includes("naranja")) {
+      detectedSlug = "naranja";
+    } else if (lowerText.includes("nacion") || lowerText.includes("nación")) {
+      detectedSlug = "nacion";
+    } else if (lowerText.includes("bbva")) {
+      detectedSlug = "bbva";
+    }
   }
+
+  // If we still can't detect the bank, return null
+  if (!detectedSlug) return null;
 
   // Find standard fields using Regex (similar to python parsers)
   let cardType: "visa" | "mastercard" | "amex" = "visa";
@@ -318,7 +367,7 @@ export function parseStatementText(text: string): BankStatement | null {
   }
 
   let paymentReceived = previousBalance;
-  const payMatch = text.match(/(?:pago\s*recibido|pago\s*acreditado|su\s*pago)[:\s]*\$?\s*([\d.,\s]+)/i);
+  const payMatch = text.match(/(?:pago\s*recibido|pago\s*acreditado|su\s*pago|pagos?\s*del\s*periodo|pago\s*registrado)[:\s]*\$?\s*([\d.,\s]+)/i);
   if (payMatch) {
     paymentReceived = parseAmountVal(payMatch[1]);
   }
@@ -386,7 +435,7 @@ export function parseStatementText(text: string): BankStatement | null {
   }
 
   const finalStatement: BankStatement = {
-    bankName: detectedSlug === "galicia" ? "Banco Galicia" : detectedSlug === "santander" ? "Banco Santander" : detectedSlug === "macro" ? "Banco Macro" : detectedSlug === "nacion" ? "Banco Nación" : "BBVA",
+    bankName: detectedSlug === "galicia" ? "Banco Galicia" : detectedSlug === "santander" ? "Banco Santander" : detectedSlug === "macro" ? "Banco Macro" : detectedSlug === "nacion" ? "Banco Nación" : detectedSlug === "naranja" ? "Naranja" : "BBVA",
     bankSlug: detectedSlug,
     cardType,
     cardLastFour,

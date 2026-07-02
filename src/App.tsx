@@ -12,13 +12,19 @@ export default function App() {
 
   // Sync Supabase authentication state on mount
   useEffect(() => {
+    // Recover session in case OAuth callback already fired before subscription
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        setCurrentView("dashboard");
+      }
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user);
-        // Force routing to dashboard if currently on auth pages
-        setCurrentView((prev) => 
-          prev === "login" || prev === "register" || prev === "forgot" ? "dashboard" : prev
-        );
+        // Force routing to dashboard (covers OAuth callback from Google, etc.)
+        setCurrentView("dashboard");
       } else {
         setUser(null);
         // Fallback to landing if logged out while on dashboard

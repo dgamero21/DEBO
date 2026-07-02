@@ -7,6 +7,7 @@ import {
   MockTransaction 
 } from "../data/statements";
 import { supabase } from "../lib/supabase";
+import { extractTextFromPDF, detectBankSlug } from "../lib/pdfExtractor";
 
 import { 
   FileText, 
@@ -36,8 +37,8 @@ interface DashboardViewProps {
 }
 
 export default function DashboardView({ onNavigate, user }: DashboardViewProps) {
-  // Currently viewed statement (null means none loaded yet, we can default to Galicia for demonstration)
-  const [currentStatement, setCurrentStatement] = useState<BankStatement | null>(BANK_STATEMENTS[0]);
+  // Currently viewed statement (null means none loaded yet — user must upload a PDF or use a preset)
+  const [currentStatement, setCurrentStatement] = useState<BankStatement | null>(null);
   const [pasteAreaOpen, setPasteAreaOpen] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [customFileError, setCustomFileError] = useState("");
@@ -55,7 +56,7 @@ export default function DashboardView({ onNavigate, user }: DashboardViewProps) 
   const [editingTagIndex, setEditingTagIndex] = useState<number | null>(null);
 
   // Unified Portfolio of Loaded Statements (The "ladd" or "Load & Add" mechanism)
-  const [portfolio, setPortfolio] = useState<BankStatement[]>([BANK_STATEMENTS[0]]);
+  const [portfolio, setPortfolio] = useState<BankStatement[]>([]);
   const [showPortfolio, setShowPortfolio] = useState(false);
 
   // Sync tags from statement when loaded
@@ -123,63 +124,162 @@ export default function DashboardView({ onNavigate, user }: DashboardViewProps) 
     const parsed = parseStatementText(pastedText);
     if (parsed) {
       setCurrentStatement(parsed);
-      setCustomFileSuccess(`¡Resumen de ${parsed.bankName} extraído y analizado correctamente!`);
-      setCustomFileError("");
       setPastedText("");
       setPasteAreaOpen(false);
 
-      // Add to portfolio automatically
-      const exists = portfolio.some(
-        b => b.bankSlug === parsed.bankSlug && b.cardLastFour === parsed.cardLastFour
+      // Add to portfolio with dedup
+      const isDuplicate = portfolio.some(
+        (b) =>
+          b.bankSlug === parsed.bankSlug &&
+          b.cardLastFour === parsed.cardLastFour &&
+          b.periodFrom === parsed.periodFrom &&
+          b.periodTo === parsed.periodTo
       );
-      if (!exists) {
-        setPortfolio([...portfolio, parsed]);
+
+      if (isDuplicate) {
+        setCustomFileError(
+          `Este resumen de ${parsed.bankName} (${parsed.cardType} • ${parsed.cardLastFour}, periodo ${parsed.periodFrom} al ${parsed.periodTo}) ya fue cargado anteriormente. No se permiten duplicados.`
+        );
+        return;
       }
+
+      setPortfolio([...portfolio, parsed]);
+      setCustomFileSuccess(`¡Resumen de ${parsed.bankName} extraído y analizado correctamente!`);
+      setCustomFileError("");
     } else {
       setCustomFileError("No se pudo detectar el formato. Asegúrate de incluir palabras clave como Galicia, Santander o Macro, y montos válidos.");
     }
   };
 
-  // Drag and drop / file uploader simulator
-  const handleFileUploadSimulated = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── PDF Upload state ──
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showBankSelector, setShowBankSelector] = useState(false);
+  const [pendingRawText, setPendingRawText] = useState("");
+  const [pendingFileName, setPendingFileName] = useState("");
+
+  // ── Real PDF Upload with OCR + bank detection + dedup ──
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       setCustomFileError("Formato no soportado. Por favor sube un archivo PDF del resumen.");
       return;
     }
 
-    // Simulate PDF processing and load a preset corresponding to the filename or pick a random one
-    const fileNameLower = file.name.toLowerCase();
-    let pickedStatement = BANK_STATEMENTS[0]; // default Galicia
+    setIsProcessing(true);
+    setCustomFileError("");
+    setCustomFileSuccess("");
 
-    if (fileNameLower.includes("santander") || fileNameLower.includes("rio")) {
-      pickedStatement = BANK_STATEMENTS[1];
-    } else if (fileNameLower.includes("macro") || fileNameLower.includes("amex")) {
-      pickedStatement = BANK_STATEMENTS[2];
-    } else if (fileNameLower.includes("nacion")) {
-      pickedStatement = BANK_STATEMENTS[3];
-    } else {
-      // Pick random statement if not matched
-      const randomIndex = Math.floor(Math.random() * BANK_STATEMENTS.length);
-      pickedStatement = BANK_STATEMENTS[randomIndex];
+    try {
+      // 1. Extract text from PDF using pdfjs-dist
+      const extractedText = await extractTextFromPDF(file);
+
+      if (!extractedText.trim()) {
+        setCustomFileError(
+          "No se pudo extraer texto del PDF. Asegúrate de que no sea un documento escaneado (sin texto seleccionable)."
+        );
+        setIsProcessing(false);
+        // Reset the file input so user can retry
+        e.target.value = "";
+        return;
+      }
+
+      // 2. Detect bank from the extracted text
+      const detectedSlug = detectBankSlug(extractedText);
+
+      if (!detectedSlug) {
+        // Bank not recognized — show bank selector modal
+        setPendingRawText(extractedText);
+        setPendingFileName(file.name);
+        setShowBankSelector(true);
+        setIsProcessing(false);
+        e.target.value = "";
+        return;
+      }
+
+      // 3. Bank detected — parse directly
+      const parsed = parseStatementText(extractedText, detectedSlug as "galicia" | "santander" | "macro" | "nacion" | "bbva" | "naranja");
+      if (parsed) {
+        addToPortfolioWithDedup(parsed, extractedText, file.name);
+      } else {
+        setCustomFileError("No se pudo analizar el contenido del PDF con el formato detectado.");
+      }
+    } catch (err) {
+      console.error("PDF processing error:", err);
+      setCustomFileError("Error al procesar el PDF. Intenta de nuevo.");
     }
 
-    // Customize the holder name to make it look unique to their file upload
-    const customHolder = file.name.substring(0, file.name.lastIndexOf('.')).replace(/_|-/g, " ").toUpperCase();
-    const customized: BankStatement = {
-      ...pickedStatement,
-      holderName: customHolder.length > 5 ? customHolder : pickedStatement.holderName,
-      cardLastFour: Math.floor(1000 + Math.random() * 9000).toString()
+    setIsProcessing(false);
+    e.target.value = "";
+  };
+
+  // ── Bank selector: user picks the bank when auto-detection fails ──
+  const handleBankSelected = async (slug: "galicia" | "santander" | "macro" | "nacion" | "bbva" | "naranja") => {
+    setShowBankSelector(false);
+    setIsProcessing(true);
+
+    // Inject bank name at the top so parseStatementText can detect it
+    const bankNames: Record<string, string> = {
+      galicia: "BANCO GALICIA",
+      santander: "SANTANDER RIO",
+      macro: "BANCO MACRO",
+      nacion: "BANCO DE LA NACION ARGENTINA",
+      bbva: "BBVA FRANCES",
+      naranja: "NARANJA",
     };
+    const enrichedText = `${bankNames[slug]} - RESUMEN DE CUENTA\n${pendingRawText}`;
+    const parsed = parseStatementText(enrichedText, slug);
 
-    setCurrentStatement(customized);
-    setCustomFileSuccess(`¡Archivo "${file.name}" leído e interpretado correctamente mediante OCR local!`);
-    setCustomFileError("");
+    if (parsed) {
+      addToPortfolioWithDedup(parsed, pendingRawText, pendingFileName);
+    } else {
+      setCustomFileError(
+        "No se pudo analizar el resumen con el banco seleccionado. Verificá que el PDF tenga el formato correcto."
+      );
+    }
 
-    // Add to portfolio automatically
-    setPortfolio([...portfolio, customized]);
+    setIsProcessing(false);
+    setPendingRawText("");
+    setPendingFileName("");
+  };
+
+  const handleCancelBankSelector = () => {
+    setShowBankSelector(false);
+    setPendingRawText("");
+    setPendingFileName("");
+  };
+
+  // ── Add to portfolio with duplicate validation ──
+  const addToPortfolioWithDedup = (
+    parsed: BankStatement,
+    rawText: string,
+    fileName: string
+  ) => {
+    // Check for duplicate: same bank + same card last four + same period
+    const isDuplicate = portfolio.some(
+      (b) =>
+        b.bankSlug === parsed.bankSlug &&
+        b.cardLastFour === parsed.cardLastFour &&
+        b.periodFrom === parsed.periodFrom &&
+        b.periodTo === parsed.periodTo
+    );
+
+    if (isDuplicate) {
+      setCustomFileError(
+        `Este resumen de ${parsed.bankName} (${parsed.cardType} • ${parsed.cardLastFour}, periodo ${parsed.periodFrom} al ${parsed.periodTo}) ya fue cargado anteriormente. No se permiten duplicados.`
+      );
+      return;
+    }
+
+    // All good — add to portfolio
+    setCurrentStatement(parsed);
+    const updatedPortfolio = [...portfolio, parsed];
+    setPortfolio(updatedPortfolio);
+    setCustomFileSuccess(
+      `¡Resumen de ${parsed.bankName} extraído y analizado correctamente desde "${fileName}"!`
+    );
   };
 
   // Tag management
@@ -458,7 +558,7 @@ export default function DashboardView({ onNavigate, user }: DashboardViewProps) 
                 <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
                   <UploadCloud className="w-5 h-5 text-accent-dark" /> Importar & Procesar Resumen
                 </h2>
-                <p className="text-xs text-text-secondary mt-1">Sube el PDF de tu tarjeta de crédito o selecciona un preset para probar el extractor.</p>
+                <p className="text-xs text-text-secondary mt-1">Subí el PDF de tu tarjeta de crédito para analizar tus gastos (o seleccioná un banco de prueba).</p>
               </div>
 
               {/* Bank Presets */}
@@ -479,22 +579,36 @@ export default function DashboardView({ onNavigate, user }: DashboardViewProps) 
               </div>
             </div>
 
-            {/* Drag & Drop simulated selector */}
+            {/* Drag & Drop / PDF Upload area */}
             <div className="grid gap-4 sm:grid-cols-[1.4fr_1fr]">
               <div className="relative border-2 border-dashed border-border-primary rounded-2xl p-6 bg-bg-primary/40 hover:bg-bg-primary/80 transition-colors duration-200 text-center flex flex-col items-center justify-center gap-3 group">
                 <input 
                   type="file" 
                   accept=".pdf"
-                  onChange={handleFileUploadSimulated}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={handleFileUpload}
+                  disabled={isProcessing}
+                  className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   title="Sube tu archivo PDF del resumen"
                 />
-                <div className="w-12 h-12 rounded-full bg-accent-soft flex items-center justify-center text-accent-dark group-hover:scale-105 transition-transform duration-200">
-                  <UploadCloud className="w-6 h-6" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${isProcessing ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-accent-soft text-accent-dark group-hover:scale-105'}`}>
+                  {isProcessing ? (
+                    <svg className="w-6 h-6 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <UploadCloud className="w-6 h-6" />
+                  )}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-text-primary">Arrastra tu PDF aquí o haz clic para subir</p>
-                  <p className="text-[11px] text-text-tertiary mt-1">Soporta Galicia, Santander, Macro y Nación</p>
+                  {isProcessing ? (
+                    <p className="text-sm font-bold text-amber-700">Extrayendo texto del PDF...</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-bold text-text-primary">Arrastra tu PDF aquí o haz clic para subir</p>
+                      <p className="text-[11px] text-text-tertiary mt-1">Soporta Galicia, Santander, Macro, Nación y Naranja</p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -556,6 +670,65 @@ export default function DashboardView({ onNavigate, user }: DashboardViewProps) 
                       Analizar Texto
                     </button>
                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ── Bank Selector Modal (when bank not recognized) ── */}
+            <AnimatePresence>
+              {showBankSelector && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                  onClick={handleCancelBankSelector}
+                >
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-bg-secondary border border-border-primary rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md space-y-5"
+                  >
+                    <div className="text-center space-y-2">
+                      <div className="w-12 h-12 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
+                        <AlertCircle className="w-6 h-6 text-amber-600" />
+                      </div>
+                      <h3 className="text-lg font-bold text-text-primary">Banco no reconocido</h3>
+                      <p className="text-sm text-text-secondary">
+                        No pudimos detectar automáticamente el banco en el archivo{' '}
+                        <span className="font-bold text-text-primary">{pendingFileName}</span>.
+                        Seleccioná el banco correspondiente:
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { slug: "galicia", label: "Banco Galicia", color: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" },
+                        { slug: "santander", label: "Banco Santander", color: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100" },
+                        { slug: "macro", label: "Banco Macro", color: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" },
+                        { slug: "nacion", label: "Banco Nación", color: "bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100" },
+                        { slug: "bbva", label: "BBVA Francés", color: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" },
+                        { slug: "naranja", label: "Naranja", color: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100" },
+                      ].map((bank) => (
+                        <button
+                          key={bank.slug}
+                          onClick={() => handleBankSelected(bank.slug as any)}
+                          className={`px-4 py-3 rounded-2xl text-sm font-bold border transition-all duration-200 ${bank.color}`}
+                        >
+                          {bank.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={handleCancelBankSelector}
+                      className="w-full py-2.5 rounded-xl text-sm font-bold text-text-secondary hover:bg-bg-tertiary border border-border-secondary transition-all duration-200"
+                    >
+                      Cancelar
+                    </button>
+                  </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -950,10 +1123,10 @@ export default function DashboardView({ onNavigate, user }: DashboardViewProps) 
             </div>
           ) : (
             <div className="rounded-3xl border border-border-primary bg-bg-secondary p-12 text-center space-y-4 shadow-sm">
-              <FolderMinus className="w-12 h-12 text-text-tertiary mx-auto opacity-50" />
+              <UploadCloud className="w-12 h-12 text-text-tertiary mx-auto opacity-50" />
               <div>
-                <h3 className="text-base font-bold">No hay tarjetas cargadas</h3>
-                <p className="text-xs text-text-secondary mt-1">Sube un archivo del resumen o selecciona un banco arriba para ver resultados.</p>
+                <h3 className="text-base font-bold">Aún no has cargado ningún resumen</h3>
+                <p className="text-xs text-text-secondary mt-1">Subí tu primer PDF de resumen de tarjeta de crédito para empezar a analizar tus gastos.</p>
               </div>
             </div>
           )}
